@@ -34,19 +34,18 @@ def genpass(length, example, exclude, only_punct, repeat):
     for char in example:
         for type in types:
             if char in type:
-                selected = selected.union(type)
+                selected.add(type)
                 break
         else:
             raise click.ClickException("unrecognized character '%s'" %
                                        (char))
     pool = []
-    for chars in types:
+    for chars in selected:
         for char in chars:
             pool.append(char)
     pool = set(pool)
 
-    for exclusion in exclude:
-        pool = pool - {exclusion}
+    pool.difference_update(exclude)
 
     pool = list(pool)
 
