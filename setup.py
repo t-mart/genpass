@@ -1,8 +1,11 @@
 from setuptools import setup, find_packages
 
+import genpass
+
 setup(
         name='genpass',
-        version='0.1',
+        version=genpass.__version__,
+        author=genpass.__author__,
         packages=find_packages(),
         include_package_data=True,
         install_requires=[

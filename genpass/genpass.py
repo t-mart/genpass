@@ -1,8 +1,12 @@
+import sys
 import string
 import itertools
 import random
+import enum
 
 import click
+
+from . import __version__
 
 def rand_string(pool, length):
     return "".join(random.choice(pool) for _ in range(length))
@@ -10,52 +14,60 @@ def rand_string(pool, length):
 @click.command()
 @click.option('-l', '--length', default=20, type=click.INT, help="the length "
               "of the generated password.")
-@click.option('-t', '--types', 'example', default='aA0!',
-              help="include characters like these in the character pool. for "
-              "example 'a1?' includes the lower case letters, digits and "
-              "punctuation. make sure to escape any punctuation that has "
-              "special shell meaning.")
-@click.option('-e', '--exclude', default="", help="remove these characters"
-              "from the character pool.")
-@click.option('-p', '--only-punct', default="", help="if punctuation is "
-              "is in the character pool, only use the punctuation defined by "
-              "this option." "useful when requirements allow only certain "
-              "punctuation.")
-@click.option('-r', '--repeat', default=False, help="print an appropriate "
-              "password repeatedly after Enter is pressed. Ctrl-C to exit. good"
-              "for scanning through many passwords.")
-def genpass(length, example, exclude, only_punct, repeat):
-    punct = only_punct if only_punct else string.punctuation
-    types = {string.ascii_lowercase,
-             string.ascii_uppercase,
-             string.digits,
-             punct}
-    selected = set()
-    for char in example:
-        for type in types:
-            if char in type:
-                selected.add(type)
-                break
-        else:
-            raise click.ClickException("unrecognized character '%s'" %
-                                       (char))
-    pool = []
-    for chars in selected:
-        for char in chars:
-            pool.append(char)
-    pool = set(pool)
+@click.option('-u', '--upper', default=False, is_flag=True, help="include "
+              "upper case letters in the pool.")
+@click.option('-l', '--lower', default=False, is_flag=True, help="include "
+              "lower case letters in the pool.")
+@click.option('-d', '--digit', default=False, is_flag=True, help="include "
+              "digits in the pool.")
+@click.option('-p', '--punct', default=False, is_flag=True, help="include "
+              "punctuation in the pool.")
+@click.option('-e', '--exclude', default="", help="exclude the characters set "
+              "in this option from the pool.")
+@click.option('-P', '--only-punct', default="", help="if punctuation is "
+              "is in the character pool, only use the punctuation listed by "
+              "this option. useful when requirements allow only certain "
+              "punctuation. for example --only-punct #*%$")
+@click.option('-r', '--repeat', default=False, is_flag=True, help="print an "
+              "appropriate password repeatedly after Enter is pressed. Ctrl-C "
+              "to exit. good for scanning through many passwords.")
+@click.option('-v', '--version', default=False, is_flag=True, help="print "
+              "the version and then quit")
+def genpass(length, upper, lower, digit, punct, exclude, only_punct, repeat,
+            version):
+    if version:
+        click.echo(__version__)
+        sys.exit(0)
 
-    pool.difference_update(exclude)
+    classes = (upper, lower, digit, punct)
+    pool = set()
+    # add classes if present
+    if upper:
+        pool |= set(string.ascii_uppercase)
+    if lower:
+        pool |= set(string.ascii_lowercase)
+    if digit:
+        pool |= set(string.digits)
+    if only_punct:
+        # override punctuation
+        pool |= set(only_punct)
+    elif punct:
+        pool |= set(string.punctuation)
+
+    # if nothing added to pool explicitly, add everything
+    if not pool:
+        pool |= set(string.ascii_lowercase) | set(string.ascii_uppercase) | set(string.digits) | set(string.punctuation)
+
+    # remove these if you see 'em.
+    if exclude:
+        pool -= set(exclude)
 
     pool = list(pool)
 
-    if repeat:
-        try:
-            while True:
-                click.echo(rand_string(pool, length))
-                input()
-        except KeyboardInterrupt:
-            click.abort()
+    if repeat == False:
+        iterator = itertools.repeat("",1)
+        click.echo(rand_string(pool, length), nl=True)
     else:
-        click.echo(rand_string(pool, length))
-
+        for _ in itertools.repeat(""):
+            click.echo(rand_string(pool, length), nl=False)
+            input()
